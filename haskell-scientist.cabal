@@ -1,0 +1,32 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 44c1aec8f8c49f7299809bfd4851b8f1b7ff52868bcbbe0bc05aa4cd6327e57e
+
+name:           haskell-scientist
+version:        0.1.0.0
+category:       Web
+homepage:       https://github.com/marcosh/haskell-scientist#readme
+author:         Marco Perone
+maintainer:     pasafama@gmail.com
+copyright:      2020 Marco Perone
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+
+library
+  exposed-modules:
+      Scientist
+  other-modules:
+      Paths_haskell_scientist
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , random
+  default-language: Haskell2010
