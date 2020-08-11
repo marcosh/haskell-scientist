@@ -1,9 +1,10 @@
 module Scientist where
 
-import System.Random
+import Data.Maybe (catMaybes)
+import System.Random (randomRIO)
 
 -- | An 'Operation' is just a newtype around a function from 'a' to 'b'
-newtype Operation a b = Operation (a -> b)
+newtype Operation a b = Operation (a -> IO b)
 
 -- | A 'Trial' is an operation in an experiment which has a specific change of being executed
 data Trial a b = Trial
@@ -43,15 +44,31 @@ data Discrepancy a b = Discrepancy
 data ExperimentResult a b
   -- | experiment was not actually run
   = ExperimentNotRun
-  -- | no discrepancy was deteted
-  | NoDiscrepancy
   -- | some 'Discrepancy's were detected
   | Discrepancies [Discrepancy a b]
+
+-- | Run a single 'Trial'.
+-- Returns `Nothing` if the chance of the 'Trail' is less than the probability
+runTrial :: Int -> a -> b -> Trial a b -> Maybe (IO (Discrepancy a b))
+runTrial probability input controlOutput (Trial name (Operation f) chance) =
+  if probability <= chance
+  then do
+    Just $ do
+      trialResult <- f input
+      pure $ Discrepancy name input controlOutput trialResult
+  else Nothing
 
 -- | run the 'Experiment'
 runExperiment :: Experiment a b -> a -> IO (b, ExperimentResult a b)
 runExperiment (Experiment _ (Operation control) trials chance) a = do
   probability <- randomRIO (0, 100)
-  if probability < chance
-  then _actuallyRunTheExperiment
-  else pure (control a, ExperimentNotRun)
+  controlOutput <- control a
+  experimentResult <-
+        if probability <= chance
+        then do
+          trialDiscrepancies <- sequence . catMaybes $ runTrial (div (probability * chance) 100) a controlOutput <$> trials
+          -- trialDiscrepancies <- sequence trialDiscrepanciesIO
+          pure $ Discrepancies trialDiscrepancies
+        else
+          pure ExperimentNotRun
+  pure (controlOutput, experimentResult)
