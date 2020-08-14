@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cae8b967df8245b3e13f38fbbd10d846476cb861e1ce413fc21085766309d948
+-- hash: 8da9ca6d4ce67fdcf057ced30e1946f0d98d52b49e7bf73336ade931f424b056
 
 name:           haskell-scientist
 version:        0.1.0.0
@@ -19,12 +19,28 @@ extra-source-files:
 
 library
   exposed-modules:
-      Scientist
+      Scientist.Scientist
   other-modules:
       Paths_haskell_scientist
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , random
+  default-language: Haskell2010
+
+test-suite haskell-scientist-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Scientist.ScientistSpec
+      Paths_haskell_scientist
+  hs-source-dirs:
+      test
+  build-depends:
+      QuickCheck
+    , base >=4.7 && <5
+    , haskell-scientist
+    , hspec
     , random
   default-language: Haskell2010
