@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8da9ca6d4ce67fdcf057ced30e1946f0d98d52b49e7bf73336ade931f424b056
+-- hash: 3281f59da0b8043709c68bbb99e9c1fc0262b8269b34d8e2bdab753f9da883f5
 
 name:           haskell-scientist
 version:        0.1.0.0
@@ -26,7 +26,6 @@ library
       src
   build-depends:
       base >=4.7 && <5
-    , random
   default-language: Haskell2010
 
 test-suite haskell-scientist-test
@@ -42,5 +41,4 @@ test-suite haskell-scientist-test
     , base >=4.7 && <5
     , haskell-scientist
     , hspec
-    , random
   default-language: Haskell2010

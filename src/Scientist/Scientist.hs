@@ -2,7 +2,6 @@ module Scientist.Scientist where
 
 -- base
 import Data.Maybe (catMaybes)
-import System.Random (randomRIO)
 
 -- | An 'Operation' is just a newtype around an effectful function from 'a' to 'b'
 newtype Operation m a b = Operation (a -> m b)
@@ -63,9 +62,8 @@ runTrial probability input controlOutput (Trial name (Operation f) chance) =
   else pure Nothing
 
 -- | run the 'Experiment'
-runExperiment :: Eq b => Experiment IO a b -> a -> IO (b, ExperimentResult a b)
-runExperiment (Experiment _ (Operation control) trials chance) a = do
-  probability <- randomRIO (0, 100)
+runExperiment :: Monad m => Eq b => Int -> Experiment m a b -> a -> m (b, ExperimentResult a b)
+runExperiment probability (Experiment _ (Operation control) trials chance) a = do
   controlOutput <- control a
   experimentResult <-
         if probability <= chance
