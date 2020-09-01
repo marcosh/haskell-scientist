@@ -16,7 +16,7 @@ import Scientist.Scientist
 data FunTrial m a b = FunTrial
   { _ftName      :: String
   -- | the trial operation
-  , _ftOperation :: Fun a (m b)
+  , _ftFunction :: Fun a (m b)
   -- | the chance that the trial operation is going to be executed inside an experiment
   , _ftChanche   :: Int
   }
@@ -37,27 +37,39 @@ spec =
     describe "runTrial" $ do
 
       it "does not run the trial if the probability is higher or equal than the chance" $ property $
-        forAll (arbitrary `suchThat` \(probability, chance, _, _, _) -> probability >= chance) $
-          \(probability, chance, input :: String, controlOutput, trialName) ->
-            runTrial probability input controlOutput (Trial trialName (Operation (pure :: a -> Identity a)) chance)
+        forAll (arbitrary `suchThat` \(probability, _, _, funTrial) -> probability >= _ftChanche funTrial) $
+          \(probability, input :: String, controlOutput :: String, funTrial) ->
+            runTrial probability input controlOutput (toTrial funTrial)
               `shouldBe` Identity Nothing
 
       it "does run the trial if the probability is lower than the chance and does not detect a discrepancy" $ property $
-        forAll (arbitrary `suchThat` \(probability, chance, _, _) -> probability < chance) $
-          \(probability, chance, input :: String, trialName) ->
-            runTrial probability input (reverse input) (Trial trialName (Operation (pure . reverse :: String -> Identity String)) chance)
+        forAll (arbitrary `suchThat` \(probability, _, funTrial) -> probability < _ftChanche funTrial) $
+          \(probability, input :: String, funTrial :: FunTrial Identity String String) ->
+            runTrial probability input (runIdentity $ applyFun (_ftFunction funTrial) input) (toTrial funTrial)
               `shouldBe` Identity Nothing
 
       it "does run the trial if the probability is lower than the chance and does detect a discrepancy" $ property $
-        forAll (arbitrary `suchThat` \(probability, chance, input, controlOutput, _) -> probability < chance && input /= reverse controlOutput) $
-          \(probability, chance, input :: String, controlOutput, trialName) ->
-            runTrial probability input controlOutput (Trial trialName (Operation (pure . reverse :: String -> Identity String)) chance)
-              `shouldBe` Identity (Just $ Discrepancy trialName input controlOutput (reverse input))
+        forAll (arbitrary `suchThat` \(probability, input, controlOutput, funTrial) -> probability < _ftChanche funTrial && (runIdentity $ applyFun (_ftFunction funTrial) input) /= controlOutput) $
+          \(probability, input :: String, controlOutput, funTrial :: FunTrial Identity String String) ->
+            runTrial probability input controlOutput (toTrial funTrial)
+              `shouldBe` Identity (Just $ Discrepancy (_ftName funTrial) input controlOutput (runIdentity $ applyFun (_ftFunction funTrial) input))
 
     describe "runExperiment" $ do
 
       it "doesn't run the experiment if the randomInt is 100" $ property $
         forAll arbitrary $
-          \(trials, chance, input) ->
-            runExperiment 100 (Experiment "" (Operation (pure . reverse :: String -> Identity String)) (toTrial <$> trials) chance) input
-              `shouldBe` Identity (reverse input, ExperimentNotRun)
+          \(funTrial :: FunTrial Identity String String, trials, chance, input) ->
+            runExperiment 100 (Experiment "" (_tOperation $ toTrial funTrial) (toTrial <$> trials) chance) input
+              `shouldBe` Identity (runIdentity $ applyFun (_ftFunction funTrial) input, ExperimentNotRun)
+
+      it "does run the experiment if the randomInt is 0" $ property $
+        forAll (arbitrary `suchThat` \(_, _, chance, _) -> chance > 0) $
+          \(funTrial :: FunTrial Identity String String, trials, chance, input) ->
+            (snd . runIdentity $ runExperiment 0 (Experiment "" (_tOperation $ toTrial funTrial) (toTrial <$> trials) chance) input)
+              `shouldNotBe` ExperimentNotRun
+
+      it "does not return discrepancies if the trials return the same value as the control operation" $ property $
+        forAll (arbitrary `suchThat` \(_, chance, _) -> chance > 0) $
+          \(funTrial :: FunTrial Identity String String, chance, input :: String) ->
+            runExperiment 0 (Experiment "" (_tOperation $ toTrial funTrial) [toTrial funTrial, toTrial funTrial] chance) input
+              `shouldBe` Identity (runIdentity $ applyFun (_ftFunction funTrial) input, Discrepancies [])
