@@ -47,13 +47,14 @@ data ExperimentResult a b
   = ExperimentNotRun
   -- | some 'Discrepancy's were detected
   | Discrepancies [Discrepancy a b]
+  deriving (Eq, Show)
 
 -- | Run a single 'Trial'.
--- Returns `Nothing` if the chance of the 'Trial' is less than the probability and the 'Trial' is not actually run
+-- Returns `Nothing` if the chance of the 'Trial' is less or equal than the 'randomInt' and the 'Trial' is not actually run
 -- or if the result of the 'Trial' is equal to 'controlOutput'
 runTrial :: (Eq b, Monad m) => Int -> a -> b -> Trial m a b -> m (Maybe (Discrepancy a b))
-runTrial probability input controlOutput (Trial name (Operation f) chance) =
-  if probability <= chance
+runTrial randomInt input controlOutput (Trial name (Operation f) chance) =
+  if randomInt < chance
   then do
     trialResult <- f input
     if trialResult == controlOutput
@@ -62,14 +63,14 @@ runTrial probability input controlOutput (Trial name (Operation f) chance) =
   else pure Nothing
 
 -- | run the 'Experiment'
-runExperiment :: Monad m => Eq b => Int -> Experiment m a b -> a -> m (b, ExperimentResult a b)
-runExperiment probability (Experiment _ (Operation control) trials chance) a = do
+runExperiment :: (Monad m, Eq b) => Int -> Experiment m a b -> a -> m (b, ExperimentResult a b)
+runExperiment randomInt (Experiment _ (Operation control) trials chance) a = do
   controlOutput <- control a
   experimentResult <-
-        if probability <= chance
-        then do
-          trialDiscrepancies <- sequence $ runTrial (div (probability * chance) 100) a controlOutput <$> trials
-          pure . Discrepancies $ catMaybes trialDiscrepancies
-        else
-          pure ExperimentNotRun
+    if randomInt < chance
+    then do
+      trialDiscrepancies <- sequence $ runTrial (div (randomInt * chance) 100) a controlOutput <$> trials
+      pure . Discrepancies $ catMaybes trialDiscrepancies
+    else
+      pure ExperimentNotRun
   pure (controlOutput, experimentResult)
